@@ -1,0 +1,24 @@
+Description: 
+    Maha Amin. Student in Udacity DevOps Engineer Nanodegree program.
+    This is file builds aws infrastructure of AWSWebApp.jpeg, using 
+    aws cloudformation tool.
+
+Parameters:
+    EnvironmentName:
+        Description: An environment name that will be prefixed to resources names
+        Type: String
+    
+    VpcCIDR:
+        Description: Please enter the IP range (CIDR notation) for this VPC
+        Type: String
+        Default: 10.0.0.0/16
+
+Resources:
+    VPC:
+        Type: AWS::EC2::VPC 
+        Properties:
+            CidrBlock: !Ref VpcCIDR
+            EnableDnsHostnames: true
+            Tags:
+                - Key: Name
+                - Value: !Ref EnvironmentName
