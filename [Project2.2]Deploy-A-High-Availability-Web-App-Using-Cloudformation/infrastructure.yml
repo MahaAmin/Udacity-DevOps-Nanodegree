@@ -16,5 +16,13 @@ Parameters:
               cd /var/www/html
               aws s3 cp s3://udacity-demo-1/udacity.zip .
               unzip -o udacity.zip
+      VPC: 
+        Type: AWS::EC2::VPC
+        Properties:
+            CidrBlock: !Ref VpcCIDR
+            EnableDnsHostnames: true
+            Tags: 
+                - Key: Name 
+                  Value: !Ref EnvironmentName
       Outputs: 
       #Bonus points for useful outputs!
