@@ -1,28 +1,26 @@
+Description:
+  Maha Amin. 
+  Udacity DevOps Engineer Nanodegree. 
+  Project 2, Deploy high availability web app.
+
 Parameters:
-    # whatever you consider a changing value, put it as a parameter instead of hard-coding it into your script
-    Resources:
-      #instace profile contains the IAM Role name(s) that we want to associate to our auto scaling EC2 Servers
-      ProfileWithRolesForOurApp:
-        Type: AWS::IAM::InstanceProfile
-        Properties: 
-          Roles:
-            - UdacityS3ReadOnlyEC2
-      
-              #!/bin/bash
-              apt-get update -y
-              apt-get install unzip awscli -y
-              apt-get install apache2 -y
-              systemctl start apache2.service
-              cd /var/www/html
-              aws s3 cp s3://udacity-demo-1/udacity.zip .
-              unzip -o udacity.zip
-      VPC: 
-        Type: AWS::EC2::VPC
-        Properties:
-            CidrBlock: !Ref VpcCIDR
-            EnableDnsHostnames: true
-            Tags: 
-                - Key: Name 
-                  Value: !Ref EnvironmentName
-      Outputs: 
-      #Bonus points for useful outputs!
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resources names
+    Type: String
+  
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.0.0.0/16
+Resources:
+  VPC: 
+    Type: AWS::EC2::VPC
+    Properties:
+        CidrBlock: !Ref VpcCIDR
+        EnableDnsHostnames: true
+        Tags: 
+            - Key: Name 
+              Value: !Ref EnvironmentName
+
+#Outputs:
+  #Bonus points for useful outputs!
