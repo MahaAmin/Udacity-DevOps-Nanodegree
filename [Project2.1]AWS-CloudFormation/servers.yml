@@ -5,11 +5,7 @@ Parameters:
     EnvironmentName:
         Description: An environment name that will be prefixed to variables names.
         Type: String
-
-Resources:
-    EnvironmentName:
-        Description: An environment name that will be prefixed to resource names
-        Type: String
+        
 Resources:
     LBSecGroup:
         Type: AWS::EC2::SecurityGroup
