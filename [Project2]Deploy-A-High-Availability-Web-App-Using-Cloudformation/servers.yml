@@ -1,4 +1,4 @@
-    Description: >
+Description: >
     Maha Amin. 
     Udacity DevOps Engineer Nanodegree. 
     Project 2, Deploy high availability web app.
@@ -32,6 +32,16 @@ Parameters:
         Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
         Type: String
         Default: 10.0.3.0/24
+    
+    ServersMinSize:
+        Description: Min number of servers to be maintained by autoscaling group.
+        Type: String
+        Default: 3
+    
+    ServersMaxSize:
+        Description: Max number of servers to be maintained by autoscaling group.
+        Type: String
+        Default: 5
 
 Resources:
     ProfileWithRolesForOurApp:
@@ -56,6 +66,7 @@ Resources:
                   FromPort: 80
                   ToPort: 80
                   CidrIp: 0.0.0.0/0
+
     WebServerSecGroup:
         Type: AWS::EC2::SecurityGroup
         Properties:
@@ -90,6 +101,7 @@ Resources:
                     cd /var/www/html
                     aws s3 cp s3://udacity-demo-1/udacity.zip .
                     unzip -o udacity.zip
+                    systemctl restart apache2.service
             ImageId: ami-053bc2e89490c5ab7	
             IamInstanceProfile: !Ref ProfileWithRolesForOurApp
             SecurityGroups: 
@@ -106,8 +118,8 @@ Resources:
             VPCZoneIdentifier:
                 - Fn::ImportValue: !Sub "${EnvironmentName}-PRIV-NETS"
             LaunchConfigurationName: !Ref WebAppLaunchConfig
-            MinSize: '3'
-            MaxSize: '5'
+            MinSize: !Ref ServersMinSize
+            MaxSize: !Ref ServersMaxSize
             TargetGroupARNs:
                 - Ref: WebAppTargetGroup
 
@@ -157,7 +169,7 @@ Resources:
             HealthCheckProtocol: HTTP
             HealthCheckTimeoutSeconds: 8
             HealthyThresholdCount: 2
-            Port: 8080
+            Port: 80
             Protocol: HTTP
             UnhealthyThresholdCount: 5
 
