@@ -1,0 +1,174 @@
+    Description: >
+    Maha Amin. 
+    Udacity DevOps Engineer Nanodegree. 
+    Project 2, Deploy high availability web app.
+
+Parameters:
+    EnvironmentName:
+        Description: An environment name that will be prefixed to variables names.
+        Type: String
+    
+    VpcCIDR:
+        Description: Please enter the IP range (CIDR notation) for this VPC
+        Type: String
+        Default: 10.0.0.0/16
+    
+    PublicSubnet1CIDR:
+        Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+        Type: String
+        Default: 10.0.0.0/24
+    
+    PublicSubnet2CIDR:
+        Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+        Type: String
+        Default: 10.0.1.0/24
+    
+    PrivateSubnet1CIDR:
+        Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
+        Type: String
+        Default: 10.0.2.0/24
+    
+    PrivateSubnet2CIDR:
+        Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
+        Type: String
+        Default: 10.0.3.0/24
+
+Resources:
+    ProfileWithRolesForOurApp:
+        Type: AWS::IAM::InstanceProfile
+        Properties: 
+          Roles:
+            - UdacityS3ReadOnlyEC2
+
+    LBSecGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupDescription: Allow http to our load balancer
+            VpcId:
+                Fn::ImportValue: !Sub "${EnvironmentName}-VPCID"
+            SecurityGroupIngress:
+                - IpProtocol: tcp
+                  FromPort: 80
+                  ToPort: 80
+                  CidrIp: 0.0.0.0/0
+            SecurityGroupEgress:
+                - IpProtocol: tcp
+                  FromPort: 80
+                  ToPort: 80
+                  CidrIp: 0.0.0.0/0
+    WebServerSecGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupDescription: Allow http to our hosts and SSH from local only
+            VpcId:
+                Fn::ImportValue: !Sub "${EnvironmentName}-VPCID"
+            SecurityGroupIngress:
+                - IpProtocol: tcp
+                  FromPort: 8080
+                  ToPort: 8080
+                  CidrIp: 0.0.0.0/0
+                - IpProtocol: tcp
+                  FromPort: 22
+                  ToPort: 22
+                  CidrIp: 0.0.0.0/0
+            SecurityGroupEgress:
+                - IpProtocol: tcp
+                  FromPort: 0
+                  ToPort: 65535
+                  CidrIp: 0.0.0.0/0
+
+    WebAppLaunchConfig:
+        Type: AWS::AutoScaling::LaunchConfiguration
+        Properties:
+            UserData:
+                Fn::Base64: !Sub |
+                    #!/bin/bash
+                    apt-get update -y
+                    apt-get install unzip awscli -y
+                    apt-get install apache2 -y
+                    systemctl start apache2.service
+                    cd /var/www/html
+                    aws s3 cp s3://udacity-demo-1/udacity.zip .
+                    unzip -o udacity.zip
+            ImageId: ami-053bc2e89490c5ab7	
+            IamInstanceProfile: !Ref ProfileWithRolesForOurApp
+            SecurityGroups: 
+            - !Ref WebServerSecGroup
+            InstanceType: t2.medium
+            BlockDeviceMappings:
+            - DeviceName: "/dev/sdk"
+              Ebs:
+                VolumeSize: '10'
+
+    WebAppGroup:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties:
+            VPCZoneIdentifier:
+                - Fn::ImportValue: !Sub "${EnvironmentName}-PRIV-NETS"
+            LaunchConfigurationName: !Ref WebAppLaunchConfig
+            MinSize: '3'
+            MaxSize: '5'
+            TargetGroupARNs:
+                - Ref: WebAppTargetGroup
+
+    WebAppLB:
+        Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+        Properties:
+            Subnets:
+            - Fn::ImportValue: !Sub "${EnvironmentName}-PUB1-SN"
+            - Fn::ImportValue: !Sub "${EnvironmentName}-PUB2-SN"
+            SecurityGroups:
+            - Ref: LBSecGroup
+            Tags:
+                - Key: Name
+                  Value: Load Balancer
+                - Key: EnvironmentName
+                  Value: !Sub ${EnvironmentName}
+
+    Listener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        Properties:
+            DefaultActions:
+            - Type: forward
+              TargetGroupArn: !Ref WebAppTargetGroup
+            LoadBalancerArn: !Ref WebAppLB
+            Port: '80'
+            Protocol: HTTP
+
+    ALBListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Properties:
+            Actions:
+                - Type: forward
+                  TargetGroupArn: !Ref 'WebAppTargetGroup'
+            Conditions:
+                - Field: path-pattern
+                  Values: [/]
+            ListenerArn: !Ref 'Listener'
+            Priority: 1
+            
+    WebAppTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId:
+                Fn::ImportValue: !Sub "${EnvironmentName}-VPCID"
+            HealthCheckIntervalSeconds: 10
+            HealthCheckPath: /
+            HealthCheckProtocol: HTTP
+            HealthCheckTimeoutSeconds: 8
+            HealthyThresholdCount: 2
+            Port: 8080
+            Protocol: HTTP
+            UnhealthyThresholdCount: 5
+
+
+Outputs:
+    LoadBalancerDNS:
+        Description: The URL of the Udagram Site
+        Value: 
+            !Sub
+                - 'http://${LoadBalancerDNS}'
+                - {LoadBalancerDNS: !GetAtt WebAppLB.DNSName}
+        Export:
+            Name: !Sub "${EnvironmentName}-SiteURL"
+    
