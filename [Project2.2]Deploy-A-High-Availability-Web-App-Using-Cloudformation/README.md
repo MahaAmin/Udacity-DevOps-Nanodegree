@@ -5,3 +5,7 @@ This is the second project in Udacity-DevOps-Engineer Nanodegree. In this projec
 
 ## Infrastructure Diagram:
 ![infrastructure-diagram](project2-infrastructure-diagram.jpeg)
+
+## Output Load-Balancer url: 
+
+http://udaci-webap-pipxwoc1qra9-1386862172.us-west-2.elb.amazonaws.com/
